@@ -16,14 +16,13 @@ soldier.addComponent(Components.createComponent('selectable'))
 
 Systems.setupScene();
 Systems.addEntitiesToScene(Entities.getEntities());
-Systems.mouseClicksOn();
+Systems.bindEntitiesToMouseClick(Entities.getEntities());
 
 setInterval(function() {
 
   var entities = Entities.getEntities();
 
   //Systems.xYGravity(entities);
-  Systems.updateModelPositions(entities);
-  Systems.render();
+  Systems.render(entities);
 
 }, 100)
