@@ -7,12 +7,14 @@ var soldier = Entities.addEntity();
 soldier.addComponent(Components.createComponent('position', {x:0, y:0, z:0}));
 soldier.addComponent(Components.createComponent('visible',
   {
-    threeModelGeometry: new Three.BoxGeometry(1,1,1),
+    threeModelGeometry: new Three.BoxGeometry(10,10,10),
     threeMaterial: new Three.MeshBasicMaterial( { color: 0x00ff00 } ),
     threeModel: null
   }
 ));
-soldier.addComponent(Components.createComponent('selectable'))
+soldier.addComponent(Components.createComponent('selectable',{selected: false}));
+soldier.addComponent(Components.createComponent('velocity',{vector:[0,0,0]}));
+
 
 Systems.setupScene();
 Systems.addEntitiesToScene(Entities.getEntities());
@@ -23,6 +25,7 @@ setInterval(function() {
   var entities = Entities.getEntities();
 
   //Systems.xYGravity(entities);
+  Systems.highlightSelected(entities);
   Systems.render(entities);
 
 }, 100)

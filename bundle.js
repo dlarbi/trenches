@@ -53,12 +53,14 @@
 	soldier.addComponent(Components.createComponent('position', {x:0, y:0, z:0}));
 	soldier.addComponent(Components.createComponent('visible',
 	  {
-	    threeModelGeometry: new Three.BoxGeometry(1,1,1),
+	    threeModelGeometry: new Three.BoxGeometry(10,10,10),
 	    threeMaterial: new Three.MeshBasicMaterial( { color: 0x00ff00 } ),
 	    threeModel: null
 	  }
 	));
-	soldier.addComponent(Components.createComponent('selectable'))
+	soldier.addComponent(Components.createComponent('selectable',{selected: false}));
+	soldier.addComponent(Components.createComponent('velocity',{vector:[0,0,0]}));
+
 
 	Systems.setupScene();
 	Systems.addEntitiesToScene(Entities.getEntities());
@@ -69,6 +71,7 @@
 	  var entities = Entities.getEntities();
 
 	  //Systems.xYGravity(entities);
+	  Systems.highlightSelected(entities);
 	  Systems.render(entities);
 
 	}, 100)
@@ -36363,7 +36366,6 @@
 
 	    document.getElementById('trenches-game').onclick = null;
 	    document.getElementById('trenches-game').onclick = function(event) {
-	      console.log(event)
 	      event.preventDefault();
 	      var mouse = {};
 	      mouse.x = ( event.clientX / _renderer.domElement.clientWidth ) * 2 - 1;
@@ -36372,33 +36374,67 @@
 	      _raycaster.setFromCamera( mouse, _camera );
 	      var objects = [];
 	      entities.forEach(function(entity, index, entities) {
-	        if(typeof entity.components.visible != 'undefined') {
-	          objects.push(entity.components.visible.state.threeModel)
+	        if(typeof entity.components.visible != 'undefined' && typeof entity.components.selectable != 'undefined') {
+	          /*
+	          * We push an array [threeModel, entityId] so we can associate the clicked model with the entity
+	          */
+	          objects.push([entity.components.visible.state.threeModel, entity])
 	        }
 	      });
-
-	      var intersects = _raycaster.intersectObjects( objects );
-
-	      if ( intersects.length > 0 ) {
-	        intersects[ 0 ].object.material.color.setHex( Math.random() * 0xffffff );
-	        var particle = new Three.Sprite( new Three.MeshBasicMaterial( { color: 0x000000 } ) );
-	        particle.position.copy( intersects[ 0 ].point );
-	        particle.scale.x = particle.scale.y = 16;
-	        _scene.add( particle );
+	      var wasModelClicked = false;
+	      for(var i=0;i<objects.length;i++) {
+	        var intersects = _raycaster.intersectObjects( [objects[i][0]] );
+	        if ( intersects.length > 0 ) {
+	          /*
+	          * We have the entity we clicked in objects[i][1], so we set it's state to selected
+	          */
+	          objects[i][1].components.selectable.state.selected = true;
+	          wasModelClicked = true;
+	        }
+	      }
+	      if(!wasModelClicked && objects.length) {
+	        /*
+	        * We haven't clicked any models, so we're going to set our mouse location to the destination state
+	        * of any entities that are selected and moveable
+	        */
+	        entities.forEach(function(entity, index, entities) {
+	          console.log(entities)
+	          if(entity.components.selectable.state.selected && typeof entity.components.velocity != 'undefined') {
+	            entity.components.velocity.state.vector = [mouse.x, mouse.y, 0]
+	          }
+	        });
 	      }
 	    }
 
 	  },
 
-	  updateModelPositions: function(entities) {
-	    /*
-	    * Sets the model position equal to the entity's position within the framework
-	    */
+	  highlightSelected: function(entities) {
 	    entities.forEach(function(entity, index, entities) {
-	      if(typeof entity.components.visible != 'undefined') {
+	      if(typeof entity.components.selectable != 'undefined') {
+	        if(entity.components.selectable.state.selected) {
+	          entity.components.visible.state.threeMaterial.color.setHex(Math.random() * 0xffffff)
+	        }
+	      }
+	    });
+	  },
+
+	  updateModelPositions: function(entities) {
+
+	    entities.forEach(function(entity, index, entities) {
+	      if(typeof entity.components.position != 'undefined') {
+	        //console.log(entity.components.position.state);
+	        if(typeof entity.components.velocity != 'undefined') {
+	          entity.components.position.state.x = entity.components.velocity.state.vector[0]*100;
+	          entity.components.position.state.y = entity.components.velocity.state.vector[1]*100;
+	        }
+
+	        /*
+	        * Sets the model position equal to the entity's position within the framework
+	        */
 	        entity.components.visible.state.threeModel.position.x = entity.components.position.state.x;
 	        entity.components.visible.state.threeModel.position.y = entity.components.position.state.y;
 	      }
+
 	    });
 	  },
 
