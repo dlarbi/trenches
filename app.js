@@ -12,8 +12,8 @@ soldier.addComponent(Components.createComponent('visible',
     threeModel: null
   }
 ));
-soldier.addComponent(Components.createComponent('selectable',{selected: false}));
-soldier.addComponent(Components.createComponent('velocity',{vector:[0,0,0]}));
+soldier.addComponent(Components.createComponent('selectable',{selected: false}))
+soldier.addComponent(Components.createComponent('velocity',{destination:[0,0,0], speed:0}));
 
 
 Systems.setupScene();
@@ -23,9 +23,12 @@ Systems.bindEntitiesToMouseClick(Entities.getEntities());
 setInterval(function() {
 
   var entities = Entities.getEntities();
+  Systems.render(entities);
 
-  //Systems.xYGravity(entities);
+  Systems.velocity(entities);
   Systems.highlightSelected(entities);
+
+  Systems.updateModelPositions(entities);
   Systems.render(entities);
 
 }, 100)

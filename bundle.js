@@ -58,8 +58,8 @@
 	    threeModel: null
 	  }
 	));
-	soldier.addComponent(Components.createComponent('selectable',{selected: false}));
-	soldier.addComponent(Components.createComponent('velocity',{vector:[0,0,0]}));
+	soldier.addComponent(Components.createComponent('selectable',{selected: false}))
+	soldier.addComponent(Components.createComponent('velocity',{destination:[0,0,0], speed:0}));
 
 
 	Systems.setupScene();
@@ -69,9 +69,12 @@
 	setInterval(function() {
 
 	  var entities = Entities.getEntities();
+	  Systems.render(entities);
 
-	  //Systems.xYGravity(entities);
+	  Systems.velocity(entities);
 	  Systems.highlightSelected(entities);
+
+	  Systems.updateModelPositions(entities);
 	  Systems.render(entities);
 
 	}, 100)
@@ -36397,15 +36400,46 @@
 	        * We haven't clicked any models, so we're going to set our mouse location to the destination state
 	        * of any entities that are selected and moveable
 	        */
+	        var vectorScale = 100;
+
 	        entities.forEach(function(entity, index, entities) {
 	          console.log(entities)
 	          if(entity.components.selectable.state.selected && typeof entity.components.velocity != 'undefined') {
-	            entity.components.velocity.state.vector = [mouse.x, mouse.y, 0]
+
+	            entity.components.velocity.state.destination = [mouse.x*vectorScale, mouse.y*vectorScale/2, 0]
+	            entity.components.velocity.state.speed = 5
 	          }
 	        });
 	      }
 	    }
 
+	  },
+
+	  velocity: function(entities) {
+	    entities.forEach(function(entity, index, entities) {
+	      /*
+	      * We build a unit vector out of the entity's current position, and its destination position
+	      * We then increment the entity's position by the vector quantities each frame, until the destination & position coordinates match
+	      * We multiply the unit vector by the scalar 'speed' to define how fast the entity moves
+	      */
+	      if(typeof entity.components.position != 'undefined') {
+	        //console.log(entity.components.position.state);
+	        if(typeof entity.components.velocity != 'undefined') {
+	          //console.log(entity.components.velocity.state.vector)
+	          var destX = entity.components.velocity.state.destination[0];
+	          var destY = entity.components.velocity.state.destination[1];
+	          var posX = entity.components.position.state.x;
+	          var posY = entity.components.position.state.y;
+	          var vector = new Three.Vector3(destX-posX, (destY-posY), 0)
+	          vector.normalize();
+	          if(Math.abs(destX-posX) > 10 || Math.abs(destY-posY) > 10) {
+	            entity.components.position.state.x+=vector.x*entity.components.velocity.state.speed;
+	            entity.components.position.state.y+=vector.y*entity.components.velocity.state.speed;
+	          }
+
+	        }
+	      }
+	    });
 	  },
 
 	  highlightSelected: function(entities) {
@@ -36422,11 +36456,6 @@
 
 	    entities.forEach(function(entity, index, entities) {
 	      if(typeof entity.components.position != 'undefined') {
-	        //console.log(entity.components.position.state);
-	        if(typeof entity.components.velocity != 'undefined') {
-	          entity.components.position.state.x = entity.components.velocity.state.vector[0]*100;
-	          entity.components.position.state.y = entity.components.velocity.state.vector[1]*100;
-	        }
 
 	        /*
 	        * Sets the model position equal to the entity's position within the framework
@@ -36451,7 +36480,6 @@
 
 
 	  render: function(entities) {
-	    Systems.updateModelPositions(entities);
 	    _renderer.render( _scene, _camera );
 	  }
 	}
