@@ -59,7 +59,7 @@
 	  }
 	));
 	soldier.addComponent(Components.createComponent('selectable',{selected: false}))
-	soldier.addComponent(Components.createComponent('velocity',{destination:[0,0,0], speed:0}));
+	soldier.addComponent(Components.createComponent('movableUnit',{destination:[0,0,0], speed:0}));
 
 
 	Systems.setupScene();
@@ -69,9 +69,8 @@
 	setInterval(function() {
 
 	  var entities = Entities.getEntities();
-	  Systems.render(entities);
 
-	  Systems.velocity(entities);
+	  Systems.moveUnitsToDestination(entities);
 	  Systems.highlightSelected(entities);
 
 	  Systems.updateModelPositions(entities);
@@ -36404,10 +36403,10 @@
 
 	        entities.forEach(function(entity, index, entities) {
 	          console.log(entities)
-	          if(entity.components.selectable.state.selected && typeof entity.components.velocity != 'undefined') {
+	          if(entity.components.selectable.state.selected && typeof entity.components.movableUnit != 'undefined') {
 
-	            entity.components.velocity.state.destination = [mouse.x*vectorScale, mouse.y*vectorScale/2, 0]
-	            entity.components.velocity.state.speed = 5
+	            entity.components.movableUnit.state.destination = [mouse.x*vectorScale, mouse.y*vectorScale/2, 0]
+	            entity.components.movableUnit.state.speed = 5
 	          }
 	        });
 	      }
@@ -36415,7 +36414,7 @@
 
 	  },
 
-	  velocity: function(entities) {
+	  moveUnitsToDestination: function(entities) {
 	    entities.forEach(function(entity, index, entities) {
 	      /*
 	      * We build a unit vector out of the entity's current position, and its destination position
@@ -36424,17 +36423,17 @@
 	      */
 	      if(typeof entity.components.position != 'undefined') {
 	        //console.log(entity.components.position.state);
-	        if(typeof entity.components.velocity != 'undefined') {
-	          //console.log(entity.components.velocity.state.vector)
-	          var destX = entity.components.velocity.state.destination[0];
-	          var destY = entity.components.velocity.state.destination[1];
+	        if(typeof entity.components.movableUnit != 'undefined') {
+	          //console.log(entity.components.movableUnit.state.vector)
+	          var destX = entity.components.movableUnit.state.destination[0];
+	          var destY = entity.components.movableUnit.state.destination[1];
 	          var posX = entity.components.position.state.x;
 	          var posY = entity.components.position.state.y;
 	          var vector = new Three.Vector3(destX-posX, (destY-posY), 0)
 	          vector.normalize();
 	          if(Math.abs(destX-posX) > 10 || Math.abs(destY-posY) > 10) {
-	            entity.components.position.state.x+=vector.x*entity.components.velocity.state.speed;
-	            entity.components.position.state.y+=vector.y*entity.components.velocity.state.speed;
+	            entity.components.position.state.x+=vector.x*entity.components.movableUnit.state.speed;
+	            entity.components.position.state.y+=vector.y*entity.components.movableUnit.state.speed;
 	          }
 
 	        }
