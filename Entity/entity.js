@@ -6,6 +6,13 @@ var Entities = {
     _entities.push(entity);
     return entity;
   },
+  removeEntityById: function(id) {
+    _entities.forEach(function(entity, index, entities) {
+      if(entity.id == id) {
+        _entities.splice(index, 1);
+      }
+    })
+  },
   getEntities: function() {
     return _entities;
   }

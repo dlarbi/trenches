@@ -59,7 +59,9 @@
 	  }
 	));
 	soldier.addComponent(Components.createComponent('selectable',{selected: false}));
-	soldier.addComponent(Components.createComponent('player'));
+	soldier.addComponent(Components.createComponent('player', {damage: 10}));
+	soldier.addComponent(Components.createComponent('collides'));
+
 	soldier.addComponent(Components.createComponent('movableEntity',{destination:null, speed:0}));
 
 
@@ -72,9 +74,12 @@
 	    threeModel: null
 	  }
 	));
+	tower.addComponent(Components.createComponent('collides'));
+
 	tower.addComponent(Components.createComponent('enemy',
 	  {
-	    range: 50
+	    range: 50,
+	    damage:10
 	  }
 	));
 
@@ -87,6 +92,8 @@
 	  var entities = Entities.getEntities();
 
 	  Systems.moveEntitiesToDestination(entities);
+	  Systems.collisionDetection(entities);
+
 	  Systems.enemiesAttack(entities);
 	  Systems.highlightSelected(entities);
 	  Systems.updateModelPositions(entities);
@@ -36300,6 +36307,13 @@
 	    _entities.push(entity);
 	    return entity;
 	  },
+	  removeEntityById: function(id) {
+	    _entities.forEach(function(entity, index, entities) {
+	      if(entity.id == id) {
+	        _entities.splice(index, 1);
+	      }
+	    })
+	  },
 	  getEntities: function() {
 	    return _entities;
 	  }
@@ -36407,7 +36421,8 @@
 	        var intersects = _raycaster.intersectObjects( [objects[i][0]] );
 	        if ( intersects.length > 0 ) {
 	          /*
-	          * We have the entity we clicked in objects[i][1], so we set it's state to selected
+	          * We have the entity we clicked in objects[i][1], so we set it's state to selected if it is selectable,
+	          * else if we have clicked on an enemy entity, we attack him
 	          */
 	          if(typeof objects[i][1].components.selectable != 'undefined') {
 	            objects[i][1].components.selectable.state.selected = true;
@@ -36442,8 +36457,8 @@
 	    entities.forEach(function(entity, index, entities) {
 
 	      /*
-	      * We build a unit vector out of the entity's current position, and its destination position
-	      * We then increment the entity's position by the vector quantities each frame, until the destination & position coordinates match
+	      * We build a unit vector out of the vector between the entity's position coordinates, and its destination coordinates
+	      * We then increment the entity's position coordinates by the unit vector quantities each frame, until the destination & position coordinates match
 	      * We multiply the unit vector by the scalar 'speed' to define how fast the entity moves
 	      */
 	      if(typeof entity.components.position != 'undefined') {
@@ -36520,6 +36535,8 @@
 	                  threeModel: null
 	                }
 	              ));
+	              projectile.addComponent(Components.createComponent('collides'));
+	              projectile.addComponent(Components.createComponent('projectile', {damage: entity.components.enemy.state.damage}));
 	              projectile.addComponent(Components.createComponent('movableEntity',{destination:[playerX, playerY, 0], speed:5}));
 	              Systems.addEntitiesToScene([projectile]);
 	              */
@@ -36544,7 +36561,7 @@
 
 	        if(Math.abs(playerX-enemyX) < attackRange && Math.abs(playerY-enemyY) < attackRange) {
 	          var projectile = Entities.addEntity();
-	          projectile.addComponent(Components.createComponent('position', {x:playerX, y:playerY, z:0}));
+	          projectile.addComponent(Components.createComponent('position', {x:playerX+10, y:playerY+10, z:0}));
 	          projectile.addComponent(Components.createComponent('visible',
 	            {
 	              threeModelGeometry: new Three.BoxGeometry(.5,.5,.5),
@@ -36552,12 +36569,47 @@
 	              threeModel: null
 	            }
 	          ));
+	          projectile.addComponent(Components.createComponent('collides'));
+	          projectile.addComponent(Components.createComponent('projectile', {damage: entity.components.player.state.damage}));
 	          projectile.addComponent(Components.createComponent('movableEntity',{destination:[enemyX, enemyY, 0], speed:5}));
 	          Systems.addEntitiesToScene([projectile]);
 	        }
 	      }
 	    });
+	  },
 
+	  collisionDetection: function(entities) {
+	    entities.forEach(function(entity, index, entities) {
+	      if(typeof entity.components.position != 'undefined' && typeof entity.components.collides != 'undefined') {
+	        entities.forEach(function(innerEntity, innerIndex, innerEntities){
+	          if(innerEntity.id != entity.id) {
+	            if(typeof innerEntity.components.position != 'undefined' && typeof innerEntity.components.collides != 'undefined') {
+	              var pos1X = entity.components.position.state.x;
+	              var pos1Y = entity.components.position.state.y;
+	              var pos2X = innerEntity.components.position.state.x;
+	              var pos2Y = innerEntity.components.position.state.y;
+	              if(Math.abs(pos1X-pos2X) < 10 && Math.abs(pos1Y-pos2Y) < 10) {
+	                Systems.collision([innerEntity, entity]);
+	              }
+	            }
+	          }
+	        })
+	      }
+
+	    });
+	  },
+
+	  collision: function(entities) {
+	    entities.forEach(function(entity, index, entities) {
+	      /*
+	      * If its a projectile colliding, we administer damage and remove it from the world
+	      */
+	      if(typeof entity.components.projectile != 'undefined') {
+	        console.log(entity.components.projectile.state.damage, 'DAMAGE')
+	        Entities.removeEntityById(entity.id);
+	        _scene.remove(entity.components.visible.state.threeModel)
+	      }
+	    });
 	  },
 
 	  xYGravity: function(entities){

@@ -13,7 +13,9 @@ soldier.addComponent(Components.createComponent('visible',
   }
 ));
 soldier.addComponent(Components.createComponent('selectable',{selected: false}));
-soldier.addComponent(Components.createComponent('player'));
+soldier.addComponent(Components.createComponent('player', {damage: 10}));
+soldier.addComponent(Components.createComponent('collides'));
+
 soldier.addComponent(Components.createComponent('movableEntity',{destination:null, speed:0}));
 
 
@@ -26,9 +28,12 @@ tower.addComponent(Components.createComponent('visible',
     threeModel: null
   }
 ));
+tower.addComponent(Components.createComponent('collides'));
+
 tower.addComponent(Components.createComponent('enemy',
   {
-    range: 50
+    range: 50,
+    damage:10
   }
 ));
 
@@ -41,6 +46,8 @@ setInterval(function() {
   var entities = Entities.getEntities();
 
   Systems.moveEntitiesToDestination(entities);
+  Systems.collisionDetection(entities);
+
   Systems.enemiesAttack(entities);
   Systems.highlightSelected(entities);
   Systems.updateModelPositions(entities);
