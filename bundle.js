@@ -84,6 +84,9 @@
 	  }
 	));
 
+	document.getElementById('addBlock').onclick = function() {
+	  Systems.addBlock();
+	}
 	Systems.setupScene();
 	Systems.addEntitiesToScene(Entities.getEntities());
 	Systems.bindEntitiesToMouseClick(Entities.getEntities());
@@ -100,6 +103,7 @@
 	  Systems.highlightSelected(entities);
 	  Systems.updateModelPositions(entities);
 	  Systems.removeDeadEntities(entities);
+	  Systems.holdPlaceableEntity(entities);
 	  Systems.render(entities);
 
 	}, 100);
@@ -36512,6 +36516,66 @@
 	      }
 
 	    });
+	  },
+
+	  addBlock: function() {
+	    var tower = Entities.addEntity();
+	    tower.addComponent(Components.createComponent('position', {x:50, y:15, z:0}))
+	    tower.addComponent(Components.createComponent('visible',
+	      {
+	        threeModelGeometry: new Three.BoxGeometry(10,10,10),
+	        threeMaterial: new Three.MeshBasicMaterial( { color: 0x00ff00 } ),
+	        threeModel: null
+	      }
+	    ));
+	    tower.addComponent(Components.createComponent('collides'));
+	    //tower.addComponent(Components.createComponent('placeable'));
+	    tower.addComponent(Components.createComponent('health', {value:100, dead: false}));
+	    tower.addComponent(Components.createComponent('enemy',
+	      {
+	        range: 50,
+	        damage:10
+	      }
+	    ));
+	    Systems.addEntitiesToScene([tower]);
+
+	  },
+
+	  holdPlaceableEntity: function(entities) {
+	    entities.forEach(function(entity, index, entities) {
+	      if(typeof entity.components.placeable != 'undefined') {
+	        document.onmousemove = handleMouseMove;
+	        function handleMouseMove(event) {
+	            var dot, eventDoc, doc, body, pageX, pageY;
+
+	            event = event || window.event; // IE-ism
+
+	            // If pageX/Y aren't available and clientX/Y are,
+	            // calculate pageX/Y - logic taken from jQuery.
+	            // (This is to support old IE)
+	            if (event.pageX == null && event.clientX != null) {
+	                eventDoc = (event.target && event.target.ownerDocument) || document;
+	                doc = eventDoc.documentElement;
+	                body = eventDoc.body;
+
+	                event.pageX = event.clientX +
+	                  (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
+	                  (doc && doc.clientLeft || body && body.clientLeft || 0);
+	                event.pageY = event.clientY +
+	                  (doc && doc.scrollTop  || body && body.scrollTop  || 0) -
+	                  (doc && doc.clientTop  || body && body.clientTop  || 0 );
+	            }
+	            entity.components.position.state.x = ((event.pageX/window.innerWidth) * 2 - 1)*100;
+	            entity.components.position.state.y = -((event.pageY/window.innerWidth) * 2 - 1)*30;
+
+	            // Use event.pageX / event.pageY here
+	        }
+	      }
+	    });
+	  },
+
+	  placeEntity: function(entity) {
+
 	  },
 
 	  enemiesAttack: function(entities) {

@@ -38,6 +38,9 @@ tower.addComponent(Components.createComponent('enemy',
   }
 ));
 
+document.getElementById('addBlock').onclick = function() {
+  Systems.addBlock();
+}
 Systems.setupScene();
 Systems.addEntitiesToScene(Entities.getEntities());
 Systems.bindEntitiesToMouseClick(Entities.getEntities());
@@ -54,6 +57,7 @@ setInterval(function() {
   Systems.highlightSelected(entities);
   Systems.updateModelPositions(entities);
   Systems.removeDeadEntities(entities);
+  Systems.holdPlaceableEntity(entities);
   Systems.render(entities);
 
 }, 100);
