@@ -48,6 +48,7 @@ Systems.bindEntitiesToMouseClick(Entities.getEntities());
 setInterval(function() {
 
   var entities = Entities.getEntities();
+  Systems.mouseMove(entities);
 
   Systems.moveEntitiesToDestination(entities);
   Systems.collisionDetection(entities);
@@ -57,7 +58,6 @@ setInterval(function() {
   Systems.highlightSelected(entities);
   Systems.updateModelPositions(entities);
   Systems.removeDeadEntities(entities);
-  Systems.holdPlaceableEntity(entities);
   Systems.render(entities);
 
 }, 100);

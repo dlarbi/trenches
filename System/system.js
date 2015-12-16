@@ -48,6 +48,7 @@ var Systems = {
     document.getElementById('trenches-game').onclick = null;
     document.getElementById('trenches-game').onclick = function(event) {
       event.preventDefault();
+      var vectorScale = 100;
       var mouse = {};
       mouse.x = ( event.clientX / _renderer.domElement.clientWidth ) * 2 - 1;
       mouse.y = - ( event.clientY / _renderer.domElement.clientHeight ) * 2 + 1;
@@ -55,12 +56,26 @@ var Systems = {
       _raycaster.setFromCamera( mouse, _camera );
       var objects = [];
       entities.forEach(function(entity, index, entities) {
-        if(typeof entity.components.visible != 'undefined' && typeof entity.components.selectable != 'undefined' || typeof entity.components.enemy != 'undefined') {
+        /*
+        * If an entity is placeable, we set its position at the click and don't do anything else.
+        * This is usually when a player is building a structure in the game, and they must choose a place to build it.
+        */
+        var isPlaceableEntity = typeof entity.components.placeable != 'undefined';
+        if(isPlaceableEntity) {
+          entity.removeComponent(entity.components.placeable.name);
+          entity.components.position.state.x = mouse.x*vectorScale;
+          entity.components.position.state.y = mouse.y*vectorScale/2;
+          return;
+        }
+
+        var isSelectableOrIsEnemy = typeof entity.components.visible != 'undefined' && typeof entity.components.selectable != 'undefined' || typeof entity.components.enemy != 'undefined'
+        if(isSelectableOrIsEnemy) {
           /*
           * We push an array [threeModel, entityId] so we can associate the clicked model with the entity
           */
           objects.push([entity.components.visible.state.threeModel, entity])
         }
+
       });
       var wasModelClicked = false;
       for(var i=0;i<objects.length;i++) {
@@ -83,7 +98,6 @@ var Systems = {
         * We haven't clicked any models, so we're going to set our mouse location to the destination state
         * of any entities that are selected and moveable
         */
-        var vectorScale = 100;
 
         entities.forEach(function(entity, index, entities) {
           var isSelectedMovableEntities = typeof entity.components.selectable != 'undefined' && entity.components.selectable.state.selected && typeof entity.components.movableEntity != 'undefined';
@@ -168,7 +182,7 @@ var Systems = {
       }
     ));
     tower.addComponent(Components.createComponent('collides'));
-    //tower.addComponent(Components.createComponent('placeable'));
+    tower.addComponent(Components.createComponent('placeable'));
     tower.addComponent(Components.createComponent('health', {value:100, dead: false}));
     tower.addComponent(Components.createComponent('enemy',
       {
@@ -180,35 +194,42 @@ var Systems = {
 
   },
 
+  mouseMove: function(entities) {
+    document.onmousemove = null;
+    document.onmousemove = handleMouseMove;
+    function handleMouseMove(event) {
+        var dot, eventDoc, doc, body, pageX, pageY;
+
+        event = event || window.event; // IE-ism
+
+        // If pageX/Y aren't available and clientX/Y are,
+        // calculate pageX/Y - logic taken from jQuery.
+        // (This is to support old IE)
+        if (event.pageX == null && event.clientX != null) {
+            eventDoc = (event.target && event.target.ownerDocument) || document;
+            doc = eventDoc.documentElement;
+            body = eventDoc.body;
+
+            event.pageX = event.clientX +
+              (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
+              (doc && doc.clientLeft || body && body.clientLeft || 0);
+            event.pageY = event.clientY +
+              (doc && doc.scrollTop  || body && body.scrollTop  || 0) -
+              (doc && doc.clientTop  || body && body.clientTop  || 0 );
+        }
+
+        Systems.holdPlaceableEntity(entities);
+
+
+        // Use event.pageX / event.pageY here
+    }
+  },
+
   holdPlaceableEntity: function(entities) {
     entities.forEach(function(entity, index, entities) {
       if(typeof entity.components.placeable != 'undefined') {
-        document.onmousemove = handleMouseMove;
-        function handleMouseMove(event) {
-            var dot, eventDoc, doc, body, pageX, pageY;
-
-            event = event || window.event; // IE-ism
-
-            // If pageX/Y aren't available and clientX/Y are,
-            // calculate pageX/Y - logic taken from jQuery.
-            // (This is to support old IE)
-            if (event.pageX == null && event.clientX != null) {
-                eventDoc = (event.target && event.target.ownerDocument) || document;
-                doc = eventDoc.documentElement;
-                body = eventDoc.body;
-
-                event.pageX = event.clientX +
-                  (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
-                  (doc && doc.clientLeft || body && body.clientLeft || 0);
-                event.pageY = event.clientY +
-                  (doc && doc.scrollTop  || body && body.scrollTop  || 0) -
-                  (doc && doc.clientTop  || body && body.clientTop  || 0 );
-            }
-            entity.components.position.state.x = ((event.pageX/window.innerWidth) * 2 - 1)*100;
-            entity.components.position.state.y = -((event.pageY/window.innerWidth) * 2 - 1)*30;
-
-            // Use event.pageX / event.pageY here
-        }
+        entity.components.position.state.x = ((event.pageX/window.innerWidth) * 2 - 1)*100;
+        entity.components.position.state.y = -((event.pageY/window.innerHeight) * 2 - 1)*30;
       }
     });
   },

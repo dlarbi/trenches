@@ -25,6 +25,14 @@ var Entity = function() {
     var self = this;
     self.components[component.name] = component;
   }
+  this.removeComponent = function(componentName) {
+    var self = this;
+    for(var key in self.components) {
+      if(key == componentName) {
+        delete self.components[key];
+      }
+    }
+  }
 }
 
 module.exports = Entities;
