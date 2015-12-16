@@ -75,6 +75,7 @@
 	  }
 	));
 	tower.addComponent(Components.createComponent('collides'));
+	tower.addComponent(Components.createComponent('health', {value:100, dead: false}));
 
 	tower.addComponent(Components.createComponent('enemy',
 	  {
@@ -93,10 +94,12 @@
 
 	  Systems.moveEntitiesToDestination(entities);
 	  Systems.collisionDetection(entities);
+	  //Systems.xYGravity(entities);
 
 	  Systems.enemiesAttack(entities);
 	  Systems.highlightSelected(entities);
 	  Systems.updateModelPositions(entities);
+	  Systems.removeDeadEntities(entities);
 	  Systems.render(entities);
 
 	}, 100);
@@ -36427,7 +36430,6 @@
 	          if(typeof objects[i][1].components.selectable != 'undefined') {
 	            objects[i][1].components.selectable.state.selected = true;
 	          } else if(typeof objects[i][1].components.enemy != 'undefined') {
-	            console.log('attack that guy')
 	            Systems.attackEnemy(objects[i][1], entities);
 	          }
 	          wasModelClicked = true;
@@ -36549,7 +36551,6 @@
 	  },
 
 	  attackEnemy: function(enemy, allEntities) {
-	    console.log(enemy)
 	    allEntities.forEach(function(entity, index, allEntities) {
 	      var isSelectedEntity = typeof entity.components.selectable != 'undefined' && entity.components.selectable.state.selected;
 	      if(isSelectedEntity) {
@@ -36579,6 +36580,9 @@
 	  },
 
 	  collisionDetection: function(entities) {
+	    /*
+	    * Checks if any two entities in the world are touching
+	    */
 	    entities.forEach(function(entity, index, entities) {
 	      if(typeof entity.components.position != 'undefined' && typeof entity.components.collides != 'undefined') {
 	        entities.forEach(function(innerEntity, innerIndex, innerEntities){
@@ -36600,14 +36604,41 @@
 	  },
 
 	  collision: function(entities) {
+	    /*
+	    * NOTE:  This only will work if you have pass in 2 entities
+	    */
 	    entities.forEach(function(entity, index, entities) {
 	      /*
 	      * If its a projectile colliding, we administer damage and remove it from the world
 	      */
+	      var otherEntityIndex = index == 0 ? 1 : 0;
 	      if(typeof entity.components.projectile != 'undefined') {
-	        console.log(entity.components.projectile.state.damage, 'DAMAGE')
+
 	        Entities.removeEntityById(entity.id);
-	        _scene.remove(entity.components.visible.state.threeModel)
+	        _scene.remove(entity.components.visible.state.threeModel);
+
+	        /*
+	        * If the other entity has health, we remove health points
+	        */
+	        if(typeof entities[otherEntityIndex].components.health != 'undefined') {
+	          console.log(entities[otherEntityIndex])
+	          entities[otherEntityIndex].components.health.state.value -= entity.components.projectile.state.damage;
+	          if(entities[otherEntityIndex].components.health.state.value <= 0) {
+	            entities[otherEntityIndex].components.health.state.dead = true;
+	          }
+	        }
+
+	      }
+	    });
+	  },
+
+	  removeDeadEntities: function(entities) {
+	    entities.forEach(function(entity, index, entities) {
+	      if(typeof entity.components.health != 'undefined') {
+	        if(entity.components.health.state.dead) {
+	          Entities.removeEntityById(entity.id);
+	          _scene.remove(entity.components.visible.state.threeModel);
+	        }
 	      }
 	    });
 	  },
@@ -36616,8 +36647,8 @@
 	    entities.forEach(function(entity, index, entities) {
 	      if(typeof entity.components.position != 'undefined') {
 	        console.log(entity.components.position.state);
-	        entity.components.position.state.x++;
-	        entity.components.position.state.y++;
+	        entity.components.position.state.x+=.3;
+	        entity.components.position.state.y+=.3;
 
 	      }
 	    });

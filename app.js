@@ -29,6 +29,7 @@ tower.addComponent(Components.createComponent('visible',
   }
 ));
 tower.addComponent(Components.createComponent('collides'));
+tower.addComponent(Components.createComponent('health', {value:100, dead: false}));
 
 tower.addComponent(Components.createComponent('enemy',
   {
@@ -47,10 +48,12 @@ setInterval(function() {
 
   Systems.moveEntitiesToDestination(entities);
   Systems.collisionDetection(entities);
+  //Systems.xYGravity(entities);
 
   Systems.enemiesAttack(entities);
   Systems.highlightSelected(entities);
   Systems.updateModelPositions(entities);
+  Systems.removeDeadEntities(entities);
   Systems.render(entities);
 
 }, 100);
