@@ -1,3 +1,6 @@
+var Entities = require('../Entity/entity.js');
+var Components = require('../Component/component.js');
+
 var _renderer = null;
 var _scene = null;
 var _camera = null;
@@ -52,7 +55,7 @@ var Systems = {
       _raycaster.setFromCamera( mouse, _camera );
       var objects = [];
       entities.forEach(function(entity, index, entities) {
-        if(typeof entity.components.visible != 'undefined' && typeof entity.components.selectable != 'undefined') {
+        if(typeof entity.components.visible != 'undefined' && typeof entity.components.selectable != 'undefined' || typeof entity.components.enemy != 'undefined') {
           /*
           * We push an array [threeModel, entityId] so we can associate the clicked model with the entity
           */
@@ -66,7 +69,12 @@ var Systems = {
           /*
           * We have the entity we clicked in objects[i][1], so we set it's state to selected
           */
-          objects[i][1].components.selectable.state.selected = true;
+          if(typeof objects[i][1].components.selectable != 'undefined') {
+            objects[i][1].components.selectable.state.selected = true;
+          } else if(typeof objects[i][1].components.enemy != 'undefined') {
+            console.log('attack that guy')
+            Systems.attackEnemy(objects[i][1], entities);
+          }
           wasModelClicked = true;
         }
       }
@@ -78,11 +86,10 @@ var Systems = {
         var vectorScale = 100;
 
         entities.forEach(function(entity, index, entities) {
-          console.log(entities)
-          if(entity.components.selectable.state.selected && typeof entity.components.movableUnit != 'undefined') {
-
-            entity.components.movableUnit.state.destination = [mouse.x*vectorScale, mouse.y*vectorScale/2, 0]
-            entity.components.movableUnit.state.speed = 5
+          var isSelectedMovableEntities = typeof entity.components.selectable != 'undefined' && entity.components.selectable.state.selected && typeof entity.components.movableEntity != 'undefined';
+          if(isSelectedMovableEntities) {
+            entity.components.movableEntity.state.destination = [mouse.x*vectorScale, mouse.y*vectorScale/2, 0]
+            entity.components.movableEntity.state.speed = 5
           }
         });
       }
@@ -90,26 +97,33 @@ var Systems = {
 
   },
 
-  moveUnitsToDestination: function(entities) {
+  moveEntitiesToDestination: function(entities) {
+
     entities.forEach(function(entity, index, entities) {
+
       /*
       * We build a unit vector out of the entity's current position, and its destination position
       * We then increment the entity's position by the vector quantities each frame, until the destination & position coordinates match
       * We multiply the unit vector by the scalar 'speed' to define how fast the entity moves
       */
       if(typeof entity.components.position != 'undefined') {
-        //console.log(entity.components.position.state);
-        if(typeof entity.components.movableUnit != 'undefined') {
-          //console.log(entity.components.movableUnit.state.vector)
-          var destX = entity.components.movableUnit.state.destination[0];
-          var destY = entity.components.movableUnit.state.destination[1];
+        if(typeof entity.components.movableEntity != 'undefined' && entity.components.movableEntity.state.destination) {
+          //console.log(entity.components.movableEntity.state.vector)
+          var destX = entity.components.movableEntity.state.destination[0];
+          var destY = entity.components.movableEntity.state.destination[1];
           var posX = entity.components.position.state.x;
           var posY = entity.components.position.state.y;
           var vector = new Three.Vector3(destX-posX, (destY-posY), 0)
           vector.normalize();
+          /*
+          * If the entity has not reached its destination we move towards the destination,
+          * else we set the destination to null so we don't build a new movement vector in the next frame
+          */
           if(Math.abs(destX-posX) > 10 || Math.abs(destY-posY) > 10) {
-            entity.components.position.state.x+=vector.x*entity.components.movableUnit.state.speed;
-            entity.components.position.state.y+=vector.y*entity.components.movableUnit.state.speed;
+            entity.components.position.state.x+=vector.x*entity.components.movableEntity.state.speed;
+            entity.components.position.state.y+=vector.y*entity.components.movableEntity.state.speed;
+          } else {
+            entity.components.movableEntity.state.destination = null;
           }
 
         }
@@ -137,9 +151,73 @@ var Systems = {
         */
         entity.components.visible.state.threeModel.position.x = entity.components.position.state.x;
         entity.components.visible.state.threeModel.position.y = entity.components.position.state.y;
+
       }
 
     });
+  },
+
+  enemiesAttack: function(entities) {
+    entities.forEach(function(entity, index, entities) {
+      if(typeof entity.components.enemy != 'undefined') {
+        var inRadius = false;
+        entities.forEach(function(entityInner, indexInner, entitiesInner) {
+          if(typeof entityInner.components.player != 'undefined') {
+            var playerX = entityInner.components.position.state.x;
+            var playerY = entityInner.components.position.state.y;
+            var enemyX = entity.components.position.state.x;
+            var enemyY = entity.components.position.state.y;
+            var attackRange = entity.components.enemy.state.range
+
+            if(Math.abs(playerX-enemyX) < attackRange && Math.abs(playerY-enemyY) < attackRange) {
+              /*
+              var projectile = Entities.addEntity();
+              projectile.addComponent(Components.createComponent('position', {x:enemyX, y:enemyY, z:0}));
+              projectile.addComponent(Components.createComponent('visible',
+                {
+                  threeModelGeometry: new Three.BoxGeometry(.5,.5,.5),
+                  threeMaterial: new Three.MeshBasicMaterial( { color: 0x00ff00 } ),
+                  threeModel: null
+                }
+              ));
+              projectile.addComponent(Components.createComponent('movableEntity',{destination:[playerX, playerY, 0], speed:5}));
+              Systems.addEntitiesToScene([projectile]);
+              */
+            }
+
+          }
+        });
+      }
+    });
+  },
+
+  attackEnemy: function(enemy, allEntities) {
+    console.log(enemy)
+    allEntities.forEach(function(entity, index, allEntities) {
+      var isSelectedEntity = typeof entity.components.selectable != 'undefined' && entity.components.selectable.state.selected;
+      if(isSelectedEntity) {
+        var enemyX = enemy.components.position.state.x;
+        var enemyY = enemy.components.position.state.y;
+        var playerX = entity.components.position.state.x;
+        var playerY = entity.components.position.state.y;
+        var attackRange = 50 //entity.components.enemy.state.range
+
+        if(Math.abs(playerX-enemyX) < attackRange && Math.abs(playerY-enemyY) < attackRange) {
+          var projectile = Entities.addEntity();
+          projectile.addComponent(Components.createComponent('position', {x:playerX, y:playerY, z:0}));
+          projectile.addComponent(Components.createComponent('visible',
+            {
+              threeModelGeometry: new Three.BoxGeometry(.5,.5,.5),
+              threeMaterial: new Three.MeshBasicMaterial( { color: 0x00ff00 } ),
+              threeModel: null
+            }
+          ));
+          projectile.addComponent(Components.createComponent('movableEntity',{destination:[enemyX, enemyY, 0], speed:5}));
+          Systems.addEntitiesToScene([projectile]);
+        }
+      }
+    });
+
   },
 
   xYGravity: function(entities){

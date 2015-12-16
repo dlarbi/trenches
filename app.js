@@ -12,9 +12,25 @@ soldier.addComponent(Components.createComponent('visible',
     threeModel: null
   }
 ));
-soldier.addComponent(Components.createComponent('selectable',{selected: false}))
-soldier.addComponent(Components.createComponent('movableUnit',{destination:[0,0,0], speed:0}));
+soldier.addComponent(Components.createComponent('selectable',{selected: false}));
+soldier.addComponent(Components.createComponent('player'));
+soldier.addComponent(Components.createComponent('movableEntity',{destination:null, speed:0}));
 
+
+var tower = Entities.addEntity();
+tower.addComponent(Components.createComponent('position', {x:-50, y:25, z:0}))
+tower.addComponent(Components.createComponent('visible',
+  {
+    threeModelGeometry: new Three.BoxGeometry(10,10,10),
+    threeMaterial: new Three.MeshBasicMaterial( { color: 0x00ff00 } ),
+    threeModel: null
+  }
+));
+tower.addComponent(Components.createComponent('enemy',
+  {
+    range: 50
+  }
+));
 
 Systems.setupScene();
 Systems.addEntitiesToScene(Entities.getEntities());
@@ -24,10 +40,10 @@ setInterval(function() {
 
   var entities = Entities.getEntities();
 
-  Systems.moveUnitsToDestination(entities);
+  Systems.moveEntitiesToDestination(entities);
+  Systems.enemiesAttack(entities);
   Systems.highlightSelected(entities);
-
   Systems.updateModelPositions(entities);
   Systems.render(entities);
 
-}, 100)
+}, 100);
