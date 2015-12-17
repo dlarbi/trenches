@@ -57,7 +57,9 @@
 	* After our models are loaded, we start the game
 	*/
 	Models.loadModels([
-	    {path:Models.barracksModel(), name:'barracksModel'}
+	    {path:Models.barracksModel(), name:'barracksModel'},
+	    {path:Models.panzerModel(), name:'panzerModel'}
+
 	  ],
 	function() {
 
@@ -66,8 +68,8 @@
 	  */
 
 	  EntityComposer.composeFloor();
-	  EntityComposer.composePlayerUnit({x:0, y:0, z:0});
-	  EntityComposer.composeBarracks({x:-50, y:25, z:10});
+	  EntityComposer.composePanzerUnit({x:0, y:0, z:0}, true, Models.panzerModel()); //position, playable, 3dmodel
+	  EntityComposer.composeBarracks({x:-50, y:25, z:10}, false, Models.barracksModel()); //position, placeable, 3dmodel
 
 	  document.getElementById('addBlock').onclick = function() {
 	    Systems.addBlock();
@@ -45573,6 +45575,7 @@
 	var Entities = __webpack_require__(3);
 	var Components = __webpack_require__(4);
 	var EntityComposer = __webpack_require__(6);
+	var Models = __webpack_require__(7);
 
 	var OrbitControls = __webpack_require__(8)(THREE);
 	var _renderer = null;
@@ -45756,15 +45759,25 @@
 	        if(typeof entity.components.movableEntity != 'undefined' && entity.components.movableEntity.state.destination) {
 	          var destX = entity.components.movableEntity.state.destination[0];
 	          var destY = entity.components.movableEntity.state.destination[1];
+	          var destZ = entity.components.movableEntity.state.destination[2];
 	          var posX = entity.components.position.state.x;
 	          var posY = entity.components.position.state.y;
-	          var vector = new THREE.Vector3(destX-posX, (destY-posY), 0)
+	          var posZ = entity.components.position.state.Z;
+	          var vector = new THREE.Vector3(destX-posX, destY-posY, destZ-posY)
 	          vector.normalize();
+
+
 	          /*
 	          * If the entity has not reached its destination we move towards the destination,
 	          * else we set the destination to null so we don't build a new movement vector in the next frame
 	          */
 	          if(Math.abs(destX-posX) > 10 || Math.abs(destY-posY) > 10) {
+	            /*
+	            * Rotate entity to face its destination
+	            */
+	            var focalPoint = new THREE.Vector3(posX+destX, destY+posY, destZ+posZ)
+	            entity.components.visible.state.THREEModel.up = new THREE.Vector3(0,0,1)
+	            entity.components.visible.state.THREEModel.lookAt(focalPoint);
 	            entity.components.position.state.x+=vector.x*entity.components.movableEntity.state.speed;
 	            entity.components.position.state.y+=vector.y*entity.components.movableEntity.state.speed;
 	          } else {
@@ -45803,7 +45816,7 @@
 	  },
 
 	  addBlock: function() {
-	    var barracks = EntityComposer.composeBarracks({x:0,y:0,z:0}, true)
+	    var barracks = EntityComposer.composeBarracks({x:0,y:0,z:0}, true, Models.barracksModel())
 	    Systems.addEntitiesToScene([barracks]);
 
 	  },
@@ -46027,7 +46040,7 @@
 
 
 	var EntityComposer = {
-	  composeBarracks: function(position, placeable) {
+	  composeBarracks: function(position, placeable, model) {
 	    var barracks = Entities.addEntity();
 	    if(placeable) {
 	      barracks.addComponent(Components.createComponent('placeable'));
@@ -46035,7 +46048,7 @@
 	    barracks.addComponent(Components.createComponent('position', position))
 	    barracks.addComponent(Components.createComponent('visible',
 	      {
-	        THREEModel: Models.barracksModel()
+	        THREEModel: model
 	      }
 	    ));
 	    barracks.addComponent(Components.createComponent('size', .07));
@@ -46050,20 +46063,25 @@
 	    return barracks;
 	  },
 
-	  composePlayerUnit: function(position) {
-	    var soldier = Entities.addEntity();
-	    soldier.addComponent(Components.createComponent('position', position));
-	    soldier.addComponent(Components.createComponent('visible',
+	  composePanzerUnit: function(position, playable, model) {
+	    var panzer = Entities.addEntity();
+	    panzer.addComponent(Components.createComponent('position', position));
+	    panzer.addComponent(Components.createComponent('visible',
 	      {
 	        THREEModelGeometry: new THREE.BoxGeometry(10,10,10),
 	        THREEMaterial: new THREE.MeshBasicMaterial( { color: 0x00ff00 } ),
-	        THREEModel: null
+	        THREEModel: model
 	      }
 	    ));
-	    soldier.addComponent(Components.createComponent('selectable',{selected: false}));
-	    soldier.addComponent(Components.createComponent('player', {damage: 10}));
-	    soldier.addComponent(Components.createComponent('collides'));
-	    soldier.addComponent(Components.createComponent('movableEntity',{destination:null, speed:0}));
+	    panzer.addComponent(Components.createComponent('size', 3));
+
+	    panzer.addComponent(Components.createComponent('selectable',{selected: false}));
+	    if(playable) {
+	      panzer.addComponent(Components.createComponent('player', {damage: 10}));
+	    }
+	    panzer.addComponent(Components.createComponent('collides'));
+	    panzer.addComponent(Components.createComponent('movableEntity',{destination:null, speed:0}));
+	    return panzer;
 	  },
 
 	  composeFloor: function() {
@@ -46199,6 +46217,9 @@
 	    };
 	  },
 
+	  /*
+	  * Prior to loading the game, we load all needed JSON 3d models
+	  */
 	  loadModels: function(files, callback) {
 	    var i = 0;
 	    var loader2 = new THREE.ObjectLoader();
@@ -46219,8 +46240,15 @@
 	    });
 	  },
 
+	  /*
+	  * These are getter methods for the models.  The references to the path are transformed to JSON 3d models
+	  */
 	  barracksModel: function() {
 	    return 'client/assets/json_models/barracks.json'
+	  },
+
+	  panzerModel: function() {
+	    return 'client/assets/json_models/panzer/panzer.json'
 	  }
 
 	};

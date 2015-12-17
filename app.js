@@ -11,7 +11,9 @@ var EntityComposer = require('./Entity/entity-composer.js');
 * After our models are loaded, we start the game
 */
 Models.loadModels([
-    {path:Models.barracksModel(), name:'barracksModel'}
+    {path:Models.barracksModel(), name:'barracksModel'},
+    {path:Models.panzerModel(), name:'panzerModel'}
+
   ],
 function() {
 
@@ -20,8 +22,8 @@ function() {
   */
 
   EntityComposer.composeFloor();
-  EntityComposer.composePlayerUnit({x:0, y:0, z:0});
-  EntityComposer.composeBarracks({x:-50, y:25, z:10});
+  EntityComposer.composePanzerUnit({x:0, y:0, z:0}, true, Models.panzerModel()); //position, playable, 3dmodel
+  EntityComposer.composeBarracks({x:-50, y:25, z:10}, false, Models.barracksModel()); //position, placeable, 3dmodel
 
   document.getElementById('addBlock').onclick = function() {
     Systems.addBlock();

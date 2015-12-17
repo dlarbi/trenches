@@ -1,6 +1,7 @@
 var Entities = require('../Entity/entity.js');
 var Components = require('../Component/component.js');
 var EntityComposer = require('../Entity/entity-composer.js');
+var Models = require('../assets/models.js');
 
 var OrbitControls = require('three-orbit-controls')(THREE);
 var _renderer = null;
@@ -184,15 +185,25 @@ var Systems = {
         if(typeof entity.components.movableEntity != 'undefined' && entity.components.movableEntity.state.destination) {
           var destX = entity.components.movableEntity.state.destination[0];
           var destY = entity.components.movableEntity.state.destination[1];
+          var destZ = entity.components.movableEntity.state.destination[2];
           var posX = entity.components.position.state.x;
           var posY = entity.components.position.state.y;
-          var vector = new THREE.Vector3(destX-posX, (destY-posY), 0)
+          var posZ = entity.components.position.state.Z;
+          var vector = new THREE.Vector3(destX-posX, destY-posY, destZ-posY)
           vector.normalize();
+
+
           /*
           * If the entity has not reached its destination we move towards the destination,
           * else we set the destination to null so we don't build a new movement vector in the next frame
           */
           if(Math.abs(destX-posX) > 10 || Math.abs(destY-posY) > 10) {
+            /*
+            * Rotate entity to face its destination
+            */
+            var focalPoint = new THREE.Vector3(posX+destX, destY+posY, destZ+posZ)
+            entity.components.visible.state.THREEModel.up = new THREE.Vector3(0,0,1)
+            entity.components.visible.state.THREEModel.lookAt(focalPoint);
             entity.components.position.state.x+=vector.x*entity.components.movableEntity.state.speed;
             entity.components.position.state.y+=vector.y*entity.components.movableEntity.state.speed;
           } else {
@@ -231,7 +242,7 @@ var Systems = {
   },
 
   addBlock: function() {
-    var barracks = EntityComposer.composeBarracks({x:0,y:0,z:0}, true)
+    var barracks = EntityComposer.composeBarracks({x:0,y:0,z:0}, true, Models.barracksModel())
     Systems.addEntitiesToScene([barracks]);
 
   },

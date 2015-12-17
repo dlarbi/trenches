@@ -114,6 +114,9 @@ var Models = {
     };
   },
 
+  /*
+  * Prior to loading the game, we load all needed JSON 3d models
+  */
   loadModels: function(files, callback) {
     var i = 0;
     var loader2 = new THREE.ObjectLoader();
@@ -134,8 +137,15 @@ var Models = {
     });
   },
 
+  /*
+  * These are getter methods for the models.  The references to the path are transformed to JSON 3d models
+  */
   barracksModel: function() {
     return 'client/assets/json_models/barracks.json'
+  },
+
+  panzerModel: function() {
+    return 'client/assets/json_models/panzer/panzer.json'
   }
 
 };
