@@ -45633,7 +45633,7 @@
 	    directionalLight.position.set( 0, 1, 0 );
 	    _scene.add( directionalLight );
 	    document.getElementById('trenches-game').appendChild( _renderer.domElement );
-	    _camera.up.set(0,0,1)
+	    _camera.up.set(0,0,1);
 	    _camera.position.z = 100;
 	  },
 
