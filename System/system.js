@@ -18,31 +18,48 @@ var Systems = {
     _camera = new Three.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
     _renderer = new Three.WebGLRenderer();
     _raycaster = new Three.Raycaster();
+    var controls = new Three.OrbitControls(_camera)
+
     _renderer.setSize( window.innerWidth, window.innerHeight );
+    var directionalLight = new Three.DirectionalLight( 0xffffff, 4 );
+    directionalLight.position.set( 0, 1, 0 );
+    _scene.add( directionalLight );
     document.getElementById('trenches-game').appendChild( _renderer.domElement );
-    _camera.position.z = 50;
+    _camera.up.set(0,0,1);
+    _camera.position.z = 100;
   },
 
   addEntitiesToScene: function(entities) {
     /*
     * Called at initialization to add the initial entities to the world.
-    * Sets their geometry, model, etc.
+    * Sets their geometry, model, size, etc.
     */
     entities.forEach(function(entity, index, entities) {
       if(typeof entity.components.visible != 'undefined') {
-        var geometry = entity.components.visible.state.threeModelGeometry;
-        var material = entity.components.visible.state.threeMaterial;
-        var model = new Three.Mesh( geometry, material );
-        entity.components.visible.state.threeModel = model;
+        if(!entity.components.visible.state.threeModel) {
+          var geometry = entity.components.visible.state.threeModelGeometry;
+          var material = entity.components.visible.state.threeMaterial;
+          var model = new Three.Mesh( geometry, material );
+          entity.components.visible.state.threeModel = model;
+        } else {
+          model = entity.components.visible.state.threeModel;
+          console.log(entity)
+        }
+        if(typeof entity.components.size != "undefined"){
+          var size = entity.components.size.state;
+          model.scale.set(size,size,size);
+        }
         _scene.add( model );
       }
     });
   },
 
-  bindEntitiesToMouseClick: function(entities) {
+  bindMouseClick: function(entities) {
     /*
-    * This function should be called whenever clickable entities are added to the world.
-    * It decides whether click events intersect with rendered models using a raycaster.
+    * Decides if a player is building by checking for a placeable entity, the entity is placed in a position on click
+    * Decides if entity was clicked, by checking if click coordinates intersect with rendered models using a raycaster.
+    * Decides if clicked entity was an enemy, and attacks
+    * Decides if player is trying to move a unit, and sets any selected unit's destination to the click coordinates
     */
 
     document.getElementById('trenches-game').onclick = null;
@@ -122,7 +139,6 @@ var Systems = {
       */
       if(typeof entity.components.position != 'undefined') {
         if(typeof entity.components.movableEntity != 'undefined' && entity.components.movableEntity.state.destination) {
-          //console.log(entity.components.movableEntity.state.vector)
           var destX = entity.components.movableEntity.state.destination[0];
           var destY = entity.components.movableEntity.state.destination[1];
           var posX = entity.components.position.state.x;
@@ -201,10 +217,11 @@ var Systems = {
         var dot, eventDoc, doc, body, pageX, pageY;
 
         event = event || window.event; // IE-ism
-
-        // If pageX/Y aren't available and clientX/Y are,
-        // calculate pageX/Y - logic taken from jQuery.
-        // (This is to support old IE)
+        /*
+        * If pageX/Y aren't available and clientX/Y are,
+        * calculate pageX/Y - logic taken from jQuery.
+        * (This is to support old IE)
+        */
         if (event.pageX == null && event.clientX != null) {
             eventDoc = (event.target && event.target.ownerDocument) || document;
             doc = eventDoc.documentElement;
@@ -357,6 +374,9 @@ var Systems = {
   },
 
   removeDeadEntities: function(entities) {
+    /*
+    * Removes any entities with health component from the world and the scene, if their health.state.dead === true
+    */
     entities.forEach(function(entity, index, entities) {
       if(typeof entity.components.health != 'undefined') {
         if(entity.components.health.state.dead) {
@@ -368,6 +388,9 @@ var Systems = {
   },
 
   xYGravity: function(entities){
+    /*
+    * Turn this system on to see how any physics systems you create interact with an arbitrary physical force in the game
+    */
     entities.forEach(function(entity, index, entities) {
       if(typeof entity.components.position != 'undefined') {
         console.log(entity.components.position.state);
