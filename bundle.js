@@ -45643,13 +45643,27 @@
 	    document.getElementById('trenches-game').onclick = null;
 	    document.getElementById('trenches-game').onclick = function(event) {
 	      event.preventDefault();
-	      var vectorScale = 100;
+
+	      /*
+	      * Find coordinates of mouse click in 3d world
+	      */
 	      var mouse = {};
 	      mouse.x = ( event.clientX / _renderer.domElement.clientWidth ) * 2 - 1;
 	      mouse.y = - ( event.clientY / _renderer.domElement.clientHeight ) * 2 + 1;
+	      var vector = new THREE.Vector3();
+	      vector.set(
+	          mouse.x,
+	          mouse.y,
+	          0.5 );
+	      vector.unproject( _camera );
+	      var dir = vector.sub( _camera.position ).normalize();
+	      var distance = - _camera.position.z / dir.z;
+	      var pos = _camera.position.clone().add( dir.multiplyScalar( distance ) );
 
 	      _raycaster.setFromCamera( mouse, _camera );
 	      var objects = [];
+	      var floorEntity = [];
+
 	      entities.forEach(function(entity, index, entities) {
 	        /*
 	        * If an entity is placeable, we set its position at the click and don't do anything else.
@@ -45657,9 +45671,10 @@
 	        */
 	        var isPlaceableEntity = typeof entity.components.placeable != 'undefined';
 	        if(isPlaceableEntity) {
+
 	          entity.removeComponent(entity.components.placeable.name);
-	          entity.components.position.state.x = mouse.x*vectorScale;
-	          entity.components.position.state.y = mouse.y*vectorScale/2;
+	          entity.components.position.state.x = pos.x;
+	          entity.components.position.state.y = pos.y;
 	          return;
 	        }
 
@@ -45671,9 +45686,16 @@
 	          objects.push([entity.components.visible.state.THREEModel, entity])
 	        }
 
+	        if(typeof entity.components.floor != 'undefined') {
+	          floorEntity = [entity.components.visible.state.THREEModel, entity];
+	        }
+
 	      });
 	      var wasModelClicked = false;
 	      for(var i=0;i<objects.length;i++) {
+	        /*
+	        * Detect if we've clicked an enemy, or a selectable entity
+	        */
 	        var intersects = [];
 	        intersects = _raycaster.intersectObjects( [objects[i][0]] );
 	        if(objects[i][0].children.length && !intersects.length) {
@@ -45688,23 +45710,34 @@
 	            objects[i][1].components.selectable.state.selected = true;
 	          } else if(typeof objects[i][1].components.enemy != 'undefined') {
 	            Systems.attackEnemy(objects[i][1], entities);
+	            return;
 	          }
 	          wasModelClicked = true;
 	        }
 	      }
+
+	      /*
+	      * Detect if we've clicked the floor
+	      */
+	      if(floorEntity.length) {
+	        if(_raycaster.intersectObjects([floorEntity[0]]).length) {
+	          entities.forEach(function(entity, index, entities) {
+	            var isSelectedMovableEntities = typeof entity.components.selectable != 'undefined' && entity.components.selectable.state.selected && typeof entity.components.movableEntity != 'undefined';
+	            if(isSelectedMovableEntities) {
+	              entity.components.movableEntity.state.destination = [pos.x, pos.y, 0]
+	              entity.components.movableEntity.state.speed = 5
+	            }
+	          });
+	        }
+	      }
+
 	      if(!wasModelClicked && objects.length) {
 	        /*
 	        * We haven't clicked any models, so we're going to set our mouse location to the destination state
 	        * of any entities that are selected and moveable
 	        */
 
-	        entities.forEach(function(entity, index, entities) {
-	          var isSelectedMovableEntities = typeof entity.components.selectable != 'undefined' && entity.components.selectable.state.selected && typeof entity.components.movableEntity != 'undefined';
-	          if(isSelectedMovableEntities) {
-	            entity.components.movableEntity.state.destination = [mouse.x*vectorScale, mouse.y*vectorScale/2, 0]
-	            entity.components.movableEntity.state.speed = 5
-	          }
-	        });
+
 	      }
 	    }
 
@@ -45808,10 +45841,19 @@
 	  },
 
 	  holdPlaceableEntity: function(entities) {
+	    var vector = new THREE.Vector3();
+	    vector.set(
+	        ( event.clientX / window.innerWidth ) * 2 - 1,
+	        - ( event.clientY / window.innerHeight ) * 2 + 1,
+	        0.5 );
+	    vector.unproject( _camera );
+	    var dir = vector.sub( _camera.position ).normalize();
+	    var distance = - _camera.position.z / dir.z;
+	    var pos = _camera.position.clone().add( dir.multiplyScalar( distance ) );
 	    entities.forEach(function(entity, index, entities) {
 	      if(typeof entity.components.placeable != 'undefined') {
-	        entity.components.position.state.x = ((event.pageX/window.innerWidth) * 2 - 1)*100;
-	        entity.components.position.state.y = -((event.pageY/window.innerHeight) * 2 - 1)*30;
+	        entity.components.position.state.x = pos.x;
+	        entity.components.position.state.y = pos.y;
 	      }
 	    });
 	  },
@@ -45997,11 +46039,8 @@
 	      }
 	    ));
 	    barracks.addComponent(Components.createComponent('size', .07));
-
-
 	    barracks.addComponent(Components.createComponent('collides'));
 	    barracks.addComponent(Components.createComponent('health', {value:100, dead: false}));
-
 	    barracks.addComponent(Components.createComponent('enemy',
 	      {
 	        range: 50,
@@ -46009,7 +46048,6 @@
 	      }
 	    ));
 	    return barracks;
-
 	  },
 
 	  composePlayerUnit: function(position) {
@@ -46032,6 +46070,8 @@
 	    var floor = Entities.addEntity();
 	    floor.addComponent(Components.createComponent('position', {x:0, y:0, z:0}));
 	    floor.addComponent(Components.createComponent('size', 1));
+	    floor.addComponent(Components.createComponent('floor'));
+
 	    floor.addComponent(Components.createComponent('visible', Models.flatFloor()));
 	  }
 	}

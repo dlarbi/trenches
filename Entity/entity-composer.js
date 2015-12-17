@@ -47,6 +47,8 @@ var EntityComposer = {
     var floor = Entities.addEntity();
     floor.addComponent(Components.createComponent('position', {x:0, y:0, z:0}));
     floor.addComponent(Components.createComponent('size', 1));
+    floor.addComponent(Components.createComponent('floor'));
+
     floor.addComponent(Components.createComponent('visible', Models.flatFloor()));
   }
 }
