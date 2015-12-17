@@ -1,6 +1,8 @@
 var Entities = require('../Entity/entity.js');
 var Components = require('../Component/component.js');
+var EntityComposer = require('../Entity/entity-composer.js');
 
+var OrbitControls = require('three-orbit-controls')(THREE);
 var _renderer = null;
 var _scene = null;
 var _camera = null;
@@ -14,19 +16,23 @@ var Systems = {
     * Handles to variables like _camera are used throughout different System methods.
     */
 
-    _scene = new Three.Scene();
-    _camera = new Three.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-    _renderer = new Three.WebGLRenderer();
-    _raycaster = new Three.Raycaster();
-    var controls = new Three.OrbitControls(_camera)
-
-    _renderer.setSize( window.innerWidth, window.innerHeight );
-    var directionalLight = new Three.DirectionalLight( 0xffffff, 4 );
-    directionalLight.position.set( 0, 1, 0 );
-    _scene.add( directionalLight );
-    document.getElementById('trenches-game').appendChild( _renderer.domElement );
+    _scene = new THREE.Scene();
+    _camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+    _renderer = new THREE.WebGLRenderer();
+    _raycaster = new THREE.Raycaster();
+    _camera.lookAt(new THREE.Vector3())
     _camera.up.set(0,0,1);
     _camera.position.z = 100;
+    var controls = new OrbitControls(_camera);
+
+    _renderer.setSize( window.innerWidth, window.innerHeight );
+    var directionalLight = new THREE.DirectionalLight( 0xffffff, 4 );
+    directionalLight.position.set( 0, 1, 0 );
+    _scene.add( directionalLight );
+
+
+    document.getElementById('trenches-game').appendChild( _renderer.domElement );
+
   },
 
   addEntitiesToScene: function(entities) {
@@ -36,13 +42,13 @@ var Systems = {
     */
     entities.forEach(function(entity, index, entities) {
       if(typeof entity.components.visible != 'undefined') {
-        if(!entity.components.visible.state.threeModel) {
-          var geometry = entity.components.visible.state.threeModelGeometry;
-          var material = entity.components.visible.state.threeMaterial;
-          var model = new Three.Mesh( geometry, material );
-          entity.components.visible.state.threeModel = model;
+        if(!entity.components.visible.state.THREEModel) {
+          var geometry = entity.components.visible.state.THREEModelGeometry;
+          var material = entity.components.visible.state.THREEMaterial;
+          var model = new THREE.Mesh( geometry, material );
+          entity.components.visible.state.THREEModel = model;
         } else {
-          model = entity.components.visible.state.threeModel;
+          model = entity.components.visible.state.THREEModel;
           console.log(entity)
         }
         if(typeof entity.components.size != "undefined"){
@@ -88,15 +94,19 @@ var Systems = {
         var isSelectableOrIsEnemy = typeof entity.components.visible != 'undefined' && typeof entity.components.selectable != 'undefined' || typeof entity.components.enemy != 'undefined'
         if(isSelectableOrIsEnemy) {
           /*
-          * We push an array [threeModel, entityId] so we can associate the clicked model with the entity
+          * We push an array [THREEModel, entityId] so we can associate the clicked model with the entity
           */
-          objects.push([entity.components.visible.state.threeModel, entity])
+          objects.push([entity.components.visible.state.THREEModel, entity])
         }
 
       });
       var wasModelClicked = false;
       for(var i=0;i<objects.length;i++) {
-        var intersects = _raycaster.intersectObjects( [objects[i][0]] );
+        var intersects = [];
+        intersects = _raycaster.intersectObjects( [objects[i][0]] );
+        if(objects[i][0].children.length && !intersects.length) {
+          intersects = _raycaster.intersectObjects( objects[i][0].children )
+        }
         if ( intersects.length > 0 ) {
           /*
           * We have the entity we clicked in objects[i][1], so we set it's state to selected if it is selectable,
@@ -143,7 +153,7 @@ var Systems = {
           var destY = entity.components.movableEntity.state.destination[1];
           var posX = entity.components.position.state.x;
           var posY = entity.components.position.state.y;
-          var vector = new Three.Vector3(destX-posX, (destY-posY), 0)
+          var vector = new THREE.Vector3(destX-posX, (destY-posY), 0)
           vector.normalize();
           /*
           * If the entity has not reached its destination we move towards the destination,
@@ -165,7 +175,7 @@ var Systems = {
     entities.forEach(function(entity, index, entities) {
       if(typeof entity.components.selectable != 'undefined') {
         if(entity.components.selectable.state.selected) {
-          entity.components.visible.state.threeMaterial.color.setHex(Math.random() * 0xffffff)
+          entity.components.visible.state.THREEMaterial.color.setHex(Math.random() * 0xffffff)
         }
       }
     });
@@ -179,8 +189,8 @@ var Systems = {
         /*
         * Sets the model position equal to the entity's position within the framework
         */
-        entity.components.visible.state.threeModel.position.x = entity.components.position.state.x;
-        entity.components.visible.state.threeModel.position.y = entity.components.position.state.y;
+        entity.components.visible.state.THREEModel.position.x = entity.components.position.state.x;
+        entity.components.visible.state.THREEModel.position.y = entity.components.position.state.y;
 
       }
 
@@ -188,25 +198,8 @@ var Systems = {
   },
 
   addBlock: function() {
-    var tower = Entities.addEntity();
-    tower.addComponent(Components.createComponent('position', {x:50, y:15, z:0}))
-    tower.addComponent(Components.createComponent('visible',
-      {
-        threeModelGeometry: new Three.BoxGeometry(10,10,10),
-        threeMaterial: new Three.MeshBasicMaterial( { color: 0x00ff00 } ),
-        threeModel: null
-      }
-    ));
-    tower.addComponent(Components.createComponent('collides'));
-    tower.addComponent(Components.createComponent('placeable'));
-    tower.addComponent(Components.createComponent('health', {value:100, dead: false}));
-    tower.addComponent(Components.createComponent('enemy',
-      {
-        range: 50,
-        damage:10
-      }
-    ));
-    Systems.addEntitiesToScene([tower]);
+    var barracks = EntityComposer.composeBarracks({x:0,y:0,z:0}, true)
+    Systems.addEntitiesToScene([barracks]);
 
   },
 
@@ -273,9 +266,9 @@ var Systems = {
               projectile.addComponent(Components.createComponent('position', {x:enemyX, y:enemyY, z:0}));
               projectile.addComponent(Components.createComponent('visible',
                 {
-                  threeModelGeometry: new Three.BoxGeometry(.5,.5,.5),
-                  threeMaterial: new Three.MeshBasicMaterial( { color: 0x00ff00 } ),
-                  threeModel: null
+                  THREEModelGeometry: new THREE.BoxGeometry(.5,.5,.5),
+                  THREEMaterial: new THREE.MeshBasicMaterial( { color: 0x00ff00 } ),
+                  THREEModel: null
                 }
               ));
               projectile.addComponent(Components.createComponent('collides'));
@@ -306,9 +299,9 @@ var Systems = {
           projectile.addComponent(Components.createComponent('position', {x:playerX+10, y:playerY+10, z:0}));
           projectile.addComponent(Components.createComponent('visible',
             {
-              threeModelGeometry: new Three.BoxGeometry(.5,.5,.5),
-              threeMaterial: new Three.MeshBasicMaterial( { color: 0x00ff00 } ),
-              threeModel: null
+              THREEModelGeometry: new THREE.BoxGeometry(.5,.5,.5),
+              THREEMaterial: new THREE.MeshBasicMaterial( { color: 0x00ff00 } ),
+              THREEModel: null
             }
           ));
           projectile.addComponent(Components.createComponent('collides'));
@@ -356,7 +349,7 @@ var Systems = {
       if(typeof entity.components.projectile != 'undefined') {
 
         Entities.removeEntityById(entity.id);
-        _scene.remove(entity.components.visible.state.threeModel);
+        _scene.remove(entity.components.visible.state.THREEModel);
 
         /*
         * If the other entity has health, we remove health points
@@ -381,7 +374,7 @@ var Systems = {
       if(typeof entity.components.health != 'undefined') {
         if(entity.components.health.state.dead) {
           Entities.removeEntityById(entity.id);
-          _scene.remove(entity.components.visible.state.threeModel);
+          _scene.remove(entity.components.visible.state.THREEModel);
         }
       }
     });

@@ -236,7 +236,7 @@
                 "version": 3,
                 "materials": 12,
                 "faces": 28796,
-                "generator": "io_three",
+                "generator": "io_THREE",
                 "normals": 4057,
                 "vertices": 19926
             },
@@ -463,7 +463,7 @@
     }],
     "textures": [],
     "metadata": {
-        "generator": "io_three",
+        "generator": "io_THREE",
         "version": 4.4,
         "type": "Object"
     }
